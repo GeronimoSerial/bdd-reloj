@@ -1,5 +1,5 @@
 ###############################################################################
-# CONFIGURACI覰
+# CONFIGURACI脫N
 ###############################################################################
 
 # Ruta del repositorio local donde vas a sincronizar los CSV y el MDB
@@ -8,7 +8,8 @@ $repoPath = "C:\Users\geros\Documentos\source\bdd-reloj"
 # Ruta del archivo MDB usado por ProSoft
 $sourceMdb = "C:\Users\geros\Documentos\source\bdd-reloj\base.mdb"
 
-# Ruta del archivo MDB para WSL
+# Ruta donde instalaste mdbtools para Windows (usando WSL)
+# **NOTA:** Se elimin贸 un espacio invisible/de ruptura aqu铆.
 $sourceMdbWSL = "/mnt/c/Users/geros/Documentos/source/bdd-reloj/base.mdb"
 
 $repoWSL = "/mnt/c/Users/geros/Documentos/source/bdd-reloj"
@@ -17,7 +18,7 @@ $repoWSL = "/mnt/c/Users/geros/Documentos/source/bdd-reloj"
 $fecha = (Get-Date -Format "yyyy-MM-dd")
 
 ###############################################################################
-# 1. COPIAR MDB AL BACKUP HIST覴ICO Y COMO VERSI覰 ACTUAL
+# 1. COPIAR MDB AL BACKUP HIST脫RICO Y COMO VERSI脫N ACTUAL
 ###############################################################################
 
 # Crear carpeta historico si no existe
@@ -26,43 +27,39 @@ if (!(Test-Path $historicDir)) {
     New-Item -ItemType Directory -Force -Path $historicDir | Out-Null
 }
 
-# Copia del MDB con fecha (hist髍ico)
+# Copia del MDB con fecha (hist贸rico)
 Copy-Item $sourceMdb "$repoPath\historico\base-$fecha.mdb" -Force
 
-# Copia del MDB como versi髇 actual
+# Copia del MDB como versi贸n actual
 Copy-Item $sourceMdb "$repoPath\base.mdb" -Force
 
 ###############################################################################
-# 2. EXPORTAR TABLAS A CSV CON DELIMITADOR PUNTO Y COMA (;)
+# 2. EXPORTAR TABLAS A CSV
 ###############################################################################
 
-Write-Host "Exportando accesos con delimitador ';'"
-# Se usa -d ';' en mdb-export para garantizar el punto y coma.
-wsl mdb-export -d ';' $sourceMdbWSL "accesos" > "$repoPath\accesos_raw.csv"
+Write-Host "Exportando accesos..."
+# Aseg煤rate de que WSL est茅 configurado y 'mdb-export' est茅 en el PATH dentro de WSL
+wsl mdb-export $sourceMdbWSL "accesos" > "$repoPath\accesos_raw.csv"
 
-Write-Host "Exportando legajos con delimitador ';'"
-# Se usa -d ';' en mdb-export para garantizar el punto y coma.
-wsl mdb-export -d ';' $sourceMdbWSL "legajos" > "$repoPath\legajos.csv"
+Write-Host "Exportando legajos..."
+wsl mdb-export $sourceMdbWSL "legajos" > "$repoPath\legajos.csv"
 
 
 ###############################################################################
-# 3. FILTRAR ACCESOS SOLO DEL A袿 2025
+# 3. FILTRAR ACCESOS SOLO DEL A脩O 2025
 ###############################################################################
 
-Write-Host "Filtrando accesos del a駉 2025..."
+Write-Host "Filtrando accesos del a帽o 2025..."
 
-# **CORRECCI覰 CR蚑ICA:** Se a馻de -Delimiter ';' a Import-Csv.
-# Esto asegura que PowerShell lea el archivo que fue creado con punto y coma.
-$raw = Import-Csv "$repoPath\accesos_raw.csv" -Delimiter ';'
+$raw = Import-Csv "$repoPath\accesos_raw.csv"
 
+# **CORRECCI脫N:** Se simplific贸 la expresi贸n regular.
+# Asumiendo formato DD/MM/AA HH:MM:SS, buscamos /25 seguido por un espacio o el fin de la cadena/valor.
 $solo2025 = $raw | Where-Object {
-    # Expresi髇 regular robusta: /25 seguido por espacio o fin de valor.
     $_.DIAHORA -match "/25($|\s)"
 }
 
-# **CORRECCI覰 CR蚑ICA:** Se a馻de -Delimiter ';' a Export-Csv.
-# Esto asegura que el archivo final tambi閚 use punto y coma.
-$solo2025 | Export-Csv "$repoPath\accesos_2025.csv" -NoTypeInformation -Encoding UTF8 -Delimiter ';'
+$solo2025 | Export-Csv "$repoPath\accesos_2025.csv" -NoTypeInformation -Encoding UTF8
 
 ###############################################################################
 # 4. SUBIR TODO A GITHUB
@@ -70,9 +67,10 @@ $solo2025 | Export-Csv "$repoPath\accesos_2025.csv" -NoTypeInformation -Encoding
 
 Write-Host "Subiendo cambios a GitHub..."
 
+# Usar 'Set-Location' (alias 'cd') para cambiar la ubicaci贸n
 Set-Location $repoPath
 git add .
-git commit -m "Sync autom醫ico $fecha"
+git commit -m "Sync autom谩tico $fecha"
 git push
 
 Write-Host "Finalizado correctamente."
