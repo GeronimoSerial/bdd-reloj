@@ -8,8 +8,7 @@ $repoPath = "C:\Users\geros\Documentos\source\bdd-reloj"
 # Ruta del archivo MDB usado por ProSoft
 $sourceMdb = "C:\Users\geros\Documentos\source\bdd-reloj\base.mdb"
 
-# Ruta donde instalaste mdbtools para Windows (usando WSL)
-# **NOTA:** Se eliminó un espacio invisible/de ruptura aquí.
+# Ruta del archivo MDB para WSL
 $sourceMdbWSL = "/mnt/c/Users/geros/Documentos/source/bdd-reloj/base.mdb"
 
 $repoWSL = "/mnt/c/Users/geros/Documentos/source/bdd-reloj"
@@ -34,15 +33,16 @@ Copy-Item $sourceMdb "$repoPath\historico\base-$fecha.mdb" -Force
 Copy-Item $sourceMdb "$repoPath\base.mdb" -Force
 
 ###############################################################################
-# 2. EXPORTAR TABLAS A CSV
+# 2. EXPORTAR TABLAS A CSV CON DELIMITADOR PUNTO Y COMA (;) 🚀
 ###############################################################################
 
-Write-Host "Exportando accesos..."
-# Asegúrate de que WSL esté configurado y 'mdb-export' esté en el PATH dentro de WSL
-wsl mdb-export $sourceMdbWSL "accesos" > "$repoPath\accesos_raw.csv"
+Write-Host "Exportando accesos con delimitador ';'"
+# Se añade -d ';' para usar punto y coma como separador
+wsl mdb-export -d ';' $sourceMdbWSL "accesos" > "$repoPath\accesos_raw.csv"
 
-Write-Host "Exportando legajos..."
-wsl mdb-export $sourceMdbWSL "legajos" > "$repoPath\legajos.csv"
+Write-Host "Exportando legajos con delimitador ';'"
+# Se añade -d ';' para usar punto y coma como separador
+wsl mdb-export -d ';' $sourceMdbWSL "legajos" > "$repoPath\legajos.csv"
 
 
 ###############################################################################
@@ -51,15 +51,16 @@ wsl mdb-export $sourceMdbWSL "legajos" > "$repoPath\legajos.csv"
 
 Write-Host "Filtrando accesos del año 2025..."
 
-$raw = Import-Csv "$repoPath\accesos_raw.csv"
+# **IMPORTANTE:** Al importar, debes especificar el delimitador correcto
+$raw = Import-Csv "$repoPath\accesos_raw.csv" -Delimiter ';'
 
-# **CORRECCIÓN:** Se simplificó la expresión regular.
-# Asumiendo formato DD/MM/AA HH:MM:SS, buscamos /25 seguido por un espacio o el fin de la cadena/valor.
 $solo2025 = $raw | Where-Object {
+    # Asume formato DD/MM/AA HH:MM:SS, busca /25 seguido por espacio o fin de valor
     $_.DIAHORA -match "/25($|\s)"
 }
 
-$solo2025 | Export-Csv "$repoPath\accesos_2025.csv" -NoTypeInformation -Encoding UTF8
+# **IMPORTANTE:** Al exportar, debes especificar el delimitador punto y coma
+$solo2025 | Export-Csv "$repoPath\accesos_2025.csv" -NoTypeInformation -Encoding UTF8 -Delimiter ';'
 
 ###############################################################################
 # 4. SUBIR TODO A GITHUB
@@ -67,7 +68,6 @@ $solo2025 | Export-Csv "$repoPath\accesos_2025.csv" -NoTypeInformation -Encoding
 
 Write-Host "Subiendo cambios a GitHub..."
 
-# Usar 'Set-Location' (alias 'cd') para cambiar la ubicación
 Set-Location $repoPath
 git add .
 git commit -m "Sync automático $fecha"
